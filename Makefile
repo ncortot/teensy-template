@@ -24,16 +24,16 @@ BUILDDIR = $(abspath $(CURDIR)/build)
 #************************************************************************
 
 # path location for Teensy Loader, teensy_post_compile and teensy_reboot
-TOOLSPATH = $(CURDIR)/tools
+TOOLSPATH = /usr/share/arduino/hardware/tools
 
 # path location for Teensy 3 core
-COREPATH = teensy3
+COREPATH = /usr/share/arduino/hardware/teensy/cores/teensy3
 
 # path location for Arduino libraries
 LIBRARYPATH = libraries
 
 # path location for the arm-none-eabi compiler
-COMPILERPATH = $(TOOLSPATH)/arm-none-eabi/bin
+COMPILERPATH = /usr/bin
 
 #************************************************************************
 # Settings below this point usually do not need to be edited
@@ -82,7 +82,7 @@ SIZE = $(abspath $(COMPILERPATH))/arm-none-eabi-size
 LC_FILES := $(wildcard $(LIBRARYPATH)/*/*.c)
 LCPP_FILES := $(wildcard $(LIBRARYPATH)/*/*.cpp)
 TC_FILES := $(wildcard $(COREPATH)/*.c)
-TCPP_FILES := $(wildcard $(COREPATH)/*.cpp)
+TCPP_FILES := $(filter-out $(COREPATH)/main.cpp, $(wildcard $(COREPATH)/*.cpp))
 C_FILES := $(wildcard src/*.c)
 CPP_FILES := $(wildcard src/*.cpp)
 INO_FILES := $(wildcard src/*.ino)
@@ -107,27 +107,30 @@ reboot:
 
 upload: post_compile reboot
 
+upload-cli: $(TARGET).hex
+	teensy-loader-cli -mmcu=mk20dx128 -v -w "$<"
+
 $(BUILDDIR)/%.o: %.c
-	@echo "[CC]\t$<"
+	@echo -e "[CC]\t$<"
 	@mkdir -p "$(dir $@)"
 	@$(CC) $(CPPFLAGS) $(CFLAGS) $(L_INC) -o "$@" -c "$<"
 
 $(BUILDDIR)/%.o: %.cpp
-	@echo "[CXX]\t$<"
+	@echo -e "[CXX]\t$<"
 	@mkdir -p "$(dir $@)"
 	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(L_INC) -o "$@" -c "$<"
 
 $(BUILDDIR)/%.o: %.ino
-	@echo "[CXX]\t$<"
+	@echo -e "[CXX]\t$<"
 	@mkdir -p "$(dir $@)"
 	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(L_INC) -o "$@" -x c++ -include Arduino.h -c "$<"
 
 $(TARGET).elf: $(OBJS) $(LDSCRIPT)
-	@echo "[LD]\t$@"
+	@echo -e "[LD]\t$@"
 	@$(CC) $(LDFLAGS) -o "$@" $(OBJS) $(LIBS)
 
 %.hex: %.elf
-	@echo "[HEX]\t$@"
+	@echo -e "[HEX]\t$@"
 	@$(SIZE) "$<"
 	@$(OBJCOPY) -O ihex -R .eeprom "$<" "$@"
 
